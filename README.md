@@ -2,6 +2,14 @@
 My latest utilities library for C++, contains utilities focused around adding features C++ lacks/has bad support for and game development
 Most stuff is well-tested, maybe not for every edge case, but for at least the most common ones
 
+# Stats
+| Name | Value |
+| :--: | :--: |
+| Total lines | 4,139 |
+| Empty lines | 981 |
+| Total non-empty lines | 3,158 |
+| Total chars | 116,511 |
+
 # Sub-libraries list
 | Name | Description |
 | :--: | :---------: |
