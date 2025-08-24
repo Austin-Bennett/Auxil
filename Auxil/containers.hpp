@@ -8,7 +8,7 @@
 
 namespace Auxil {
     //A fixed-size array, but can be allocated at runtime
-    template<typename T, typename = std::enable_if_t<std::is_default_constructible_v<T> && std::is_copy_assignable_v<T>>>
+    template<std::semiregular T>
     class Array {
     protected:
         T* _arr = nullptr;
@@ -1552,6 +1552,7 @@ struct std::formatter<Auxil::LinkedList<T>, char> {
         return out;
     }
 };
+
 
 
 #endif
