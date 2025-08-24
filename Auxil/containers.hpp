@@ -1237,6 +1237,40 @@ namespace Auxil {
             return;
         }
 
+        LinkedList& advance() {
+            if (cur_index == npos) return  *this;
+
+            if (nodes[cur_index].next != npos) cur_index = nodes[cur_index].next;
+            return *this;
+        }
+
+        LinkedList& retreat() {
+            if (cur_index == npos) return  *this;
+
+            if (nodes[cur_index].prev != npos) cur_index = nodes[cur_index].prev;
+            return  *this;
+        }
+
+        LinkedList& advance(usize amt) {
+            if (cur_index == npos) return  *this;
+
+            while (nodes[cur_index].next != npos && amt-- > 0) {
+                cur_index = nodes[cur_index].next;
+            }
+
+            return *this;
+        }
+
+        LinkedList& retreat(usize amt) {
+            if (cur_index == npos) return *this;
+
+            while (nodes[cur_index].prev != npos && amt-- > 0) {
+                cur_index = nodes[cur_index].prev;
+            }
+
+            return *this;
+        }
+
         void to_front() const {
             if (cur_index == npos) return;
 
@@ -1249,6 +1283,21 @@ namespace Auxil {
 
             if (length == 1) return;
             cur_index = 1;
+        }
+
+        LinkedList& to_front() {
+            if (cur_index == npos) return *this;
+
+            cur_index = 0;
+            return *this;
+        }
+
+        LinkedList& to_back() {
+            if (cur_index == npos) return *this;
+
+            if (length == 1) return *this;
+            cur_index = 1;
+            return *this;
         }
 
         //--------- Retrieving values -----------
@@ -1398,8 +1447,6 @@ namespace Auxil {
         friend std::ostream& operator<<(std::ostream& os, const LinkedList<U>& llist);
         friend ::std::formatter<LinkedList, char>;
 
-        template<typename U, typename Compare>
-        friend void sort(LinkedList<U>& llist, Compare c);
     };
 
 
@@ -1552,7 +1599,6 @@ struct std::formatter<Auxil::LinkedList<T>, char> {
         return out;
     }
 };
-
 
 
 #endif

@@ -29,6 +29,7 @@ namespace Auxil {
             this->message.append("\n");
             message = Auxil::format(format, std::forward<Args>(args)...);
             st = boost::stacktrace::stacktrace();
+            this->message += (std::ostringstream() << st).str();
         }
 
         [[nodiscard]] const char *what() const noexcept override {
