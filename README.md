@@ -5,7 +5,7 @@ Most stuff is well-tested, maybe not for every edge case, but for at least the m
 # Sub-libraries list
 | Name | Description |
 | :--: | :---------: |
-| [**Containers**](#containers) | Contains container data structures |
+| **Containers** | Contains container data structures |
 | **Exception** | uses Boost::Stacktrace and formatting to make better exceptions |
 | **Globals** | Globals used by several components of the library |
 | **Iterator** | Utilites for iterators |
@@ -158,7 +158,26 @@ Most stuff is well-tested, maybe not for every edge case, but for at least the m
 
 
 
+# Exception
+
+**Class Exception**
+* A Exception class allowing you to print formatted error messages and combines with the boost::stacktrace library for stacktraces *
+
+| Method | Description |
+| :----: | :---------: |
+| `Exception()` | Default constructor |
+| `Exception(const char* message)` | Simple string constructor |
+| `Exception(const std::string& format, Args&&... args)` | Creates a formatted exception |
+| `const char* what()` | Returns the error message |
+| `boost::stacktrace::stacktrace` | Returns the stacktrace |
 
 
+#  Globals
 
+*Maybe one day there will be more stuff in this section*
+`#define FORCE_INLINE __attribute__((always_inline)) inline`
+
+
+#TODO: Iterator, Math, Misc, Print, Random, Threading
+**These dont have documentation because most of them are several hundered if not thousand lines of code long and im tired**
 
