@@ -980,9 +980,10 @@ namespace Auxil {
 
         //--------- Removing Items -----------
 
-        LinkedList& pop_ahead() {
-            if (cur_index == npos) return *this;
+        T pop_ahead() {
+            if (cur_index == npos) throw Exception("Cannot pop element of empty linked list!");
             Node* cur = &nodes[cur_index];
+            T res = std::move(cur->value);
             Node* next = nullptr;
             if (cur->next != npos) next = &nodes[cur->next];
 
@@ -1006,12 +1007,13 @@ namespace Auxil {
                 length--;
             }
 
-            return *this;
+            return res;
         }
 
-        LinkedList& pop_behind() {
-            if (cur_index == npos) return *this;
+        T pop_behind() {
+            if (cur_index == npos) throw Exception("Cannot pop element of empty linked list!");
             Node* cur = &nodes[cur_index];
+            T res = std::move(cur->value);
             Node* prev = nullptr;
             if (cur->prev != npos) prev = &nodes[cur->prev];
 
@@ -1034,13 +1036,14 @@ namespace Auxil {
                 length--;
             }
 
-            return *this;
+            return res;
         }
 
         //pops this node and attempts to advance to the next node
-        LinkedList& pop_advance() {
-            if (cur_index == npos) return *this;
+        T pop_advance() {
+            if (cur_index == npos) throw Exception("Cannot pop element of empty linked list!");
             Node* cur = &nodes[cur_index];
+            T res = std::move(cur->value);
             Node* next = nullptr;
             Node* prev = nullptr;
             if (cur->next != npos) next = &nodes[cur->next];
@@ -1084,13 +1087,14 @@ namespace Auxil {
                 cur_index = npos;
             }
             length--;
-            return *this;
+            return res;
         }
 
         //pops this node and attempts to retreat to the previous node
-        LinkedList& pop_retreat() {
-            if (cur_index == npos) return *this;
+        T pop_retreat() {
+            if (cur_index == npos) throw Exception("Cannot pop element of empty linked list!");
             Node* cur = &nodes[cur_index];
+            T res = std::move(cur->value);
             Node* next = nullptr;
             Node* prev = nullptr;
             if (cur->next != npos) next = &nodes[cur->next];
@@ -1134,13 +1138,13 @@ namespace Auxil {
                 cur_index = npos;
             }
             length--;
-            return *this;
+            return res;
         }
 
 
         //pops the back of the list, if the current node is the back, it retreats
-        LinkedList& pop_back() {
-            if (cur_index == npos) return *this;
+        T pop_back() {
+            if (cur_index == npos) throw Exception("Cannot pop back of empty linked list!");
 
             usize back_ind = length > 0 /*If empty*/ ? (length >= 2 /*If it has 2 or more elements*/ ? 1:0) : npos;
 
@@ -1149,6 +1153,7 @@ namespace Auxil {
             Node* back{nullptr};
             if (back_ind != npos) back = &nodes[back_ind];
             else return *this;
+            T res = std::move(back->value);
 
             if (back_ind == cur_index) cur_index = back->prev;
 
@@ -1163,15 +1168,16 @@ namespace Auxil {
 
             length--;
 
-            return *this;
+            return res;
         }
 
         //pops the front of the list, if the current node is the front, it advances
-        LinkedList& pop_front() {
-            if (cur_index == npos) return *this;
+        T pop_front() {
+            if (cur_index == npos) throw Exception("Cannot pop front of empty linked list!");
 
             Node* front{nullptr};
             front = &nodes[0];
+            T res = std::move(front->value);
 
             if (cur_index == 0) cur_index = front->next;
 
@@ -1186,7 +1192,7 @@ namespace Auxil {
 
             length--;
 
-            return *this;
+            return res;
         }
 
 
