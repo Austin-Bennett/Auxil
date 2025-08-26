@@ -4,11 +4,8 @@ Most stuff is well-tested, maybe not for every edge case, but for at least the m
 
 # Latest Patch Notes
  - The LinkedList::pop_* methods now return the popped element and throw an exception for an empty list
- - Added the SafeAtomicBoolFlag and AtomicQueue classes, both are designed more so for internal classes than general use
- - Increased the performance of the WorkerThread class and Executor class by using the optomized AtomicQueue and optomized spin-waiting
-    - Both classes now read from a Queue that uses atomic instructions, rather than using a mutex and a lock
-    - During moments where many many tasks are being passed to either class, they are constantly checking for new tasks, checking if the queue is empty for the wait methods, etc, but will begin to yield execution to the OS after a set number of clock cycles
-    - You can change the max number of clock cycles the Executor and AtomicQueue class can spin before yielding, this functionality will come to the WorkerThread soon
+ - Removed the threading library, it needs some major work...
+
 
 # Stats
 | Name | Value |
