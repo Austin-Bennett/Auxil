@@ -3,8 +3,7 @@ My latest utilities library for C++, contains utilities focused around adding fe
 Most stuff is well-tested, maybe not for every edge case, but for at least the most common ones
 
 # Latest Patch Notes
- - The LinkedList::pop_* methods now return the popped element and throw an exception for an empty list
- - Removed the threading library, it needs some major work...
+ - Added `BasicStr<std::integral CharT>` and its typedefs `using str = BasicStr<char>; using wstr = BasicStr<wchar_t>;`
 
 
 # Stats
