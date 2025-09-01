@@ -44,7 +44,7 @@ namespace Auxil {
         return condition ? _true:_false;
     }
 
-    std::vector<std::string> split(const std::string& s, const std::string& del = " ") {
+    inline std::vector<std::string> split(const std::string& s, const std::string& del = " ") {
         if (s.size() < del.size()) return {};
         if (del.empty()) return {s};
         std::vector<std::string> res;
@@ -62,6 +62,12 @@ namespace Auxil {
 
         return res;
     }
+
+    template<typename F, typename Ret, typename... Args>
+    concept Functor = requires(F f, Args... args)
+    {
+        { std::invoke(f, args...) } -> std::same_as<Ret>;
+    };
 }
 
 #endif

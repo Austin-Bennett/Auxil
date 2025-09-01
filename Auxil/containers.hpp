@@ -11,17 +11,13 @@ namespace Auxil {
     template<std::semiregular T>
     class Array {
     protected:
-        T* _arr = nullptr;
+        T* _arr{nullptr};
         usize _size{0};
-        union Flags {
-            u8 flags{0};
-            struct {
-                bool is_pointer_wrapper: 1;
-            };
-        } flags{};
+        bool _is_pointer_wrapper = false;
+
 
         void destruct() {
-            if (!flags.is_pointer_wrapper) delete[] _arr;
+            if (!_is_pointer_wrapper) delete[] _arr;
             _size = 0;
             _arr = nullptr;
         }
@@ -56,7 +52,7 @@ namespace Auxil {
         }
 
         Array(T* ptr, usize size) {
-            flags.is_pointer_wrapper = true;
+            _is_pointer_wrapper = true;
             _arr = ptr;
             _size = size;
         }
@@ -152,7 +148,7 @@ namespace Auxil {
         }
 
         [[nodiscard]] bool is_pointer_wrapper() {
-            return flags.is_pointer_wrapper;
+            return _is_pointer_wrapper;
         }
 
         [[nodiscard]] bool empty() const {
@@ -305,7 +301,7 @@ namespace Auxil {
         }
 
         Grid(const Grid& grid) noexcept {
-            if (grid.rows == 0) return;
+            if (grid._rows == 0) return;
             initialize(grid._rows, grid._columns);
 
             for (usize i = 0; i < grid.size(); i++) {
@@ -324,7 +320,7 @@ namespace Auxil {
         }
 
         Grid& operator=(const Grid& grid) noexcept {
-            if (grid.rows == 0) return *this;
+            if (grid._rows == 0) return *this;
             if (&grid == this) return *this;
 
             destruct();
@@ -413,12 +409,12 @@ namespace Auxil {
         }
 
         FORCE_INLINE T& first() const {
-            if (_rows * columns == 0) throw Exception("Cannot access first element of a {}x{} grid", _rows, _columns);
+            if (_rows * _columns == 0) throw Exception("Cannot access first element of a {}x{} grid", _rows, _columns);
             return matrix[0];
         }
 
         FORCE_INLINE T& last() const {
-            if (_rows * columns == 0) throw Exception("Cannot access last element of a {}x{} grid", _rows, _columns);
+            if (_rows * _columns == 0) throw Exception("Cannot access last element of a {}x{} grid", _rows, _columns);
             return matrix[_rows*_columns-1];
         }
 
@@ -456,7 +452,7 @@ namespace Auxil {
 
 
         Grid operator+(const Grid& other) const {
-            if (_rows != other.rows || _columns != other.columns) {
+            if (_rows != other._rows || _columns != other._columns) {
                 throw Exception("Cannot add grids of different sizes.\n"
                                 "Note, right matrix had dimensions {}x{}, expected {}x{}", other.rows, other.columns,
                                 _rows, _columns);
@@ -472,7 +468,7 @@ namespace Auxil {
 
 
         Grid operator-(const Grid& other) const {
-            if (_rows != other.rows || _columns != other.columns) {
+            if (_rows != other._rows || _columns != other._columns) {
                 throw Exception("Cannot subtract grids of different sizes.\n"
                                 "Note, right matrix had dimensions {}x{}, expected {}x{}", other.rows, other.columns,
                                 _rows, _columns);
@@ -488,7 +484,7 @@ namespace Auxil {
 
 
         Grid& operator+=(const Grid& other) {
-            if (_rows != other.rows || _columns != other.columns) {
+            if (_rows != other._rows || _columns != other._columns) {
                 throw Exception("Cannot add grids of different sizes.\n"
                                 "Note, right matrix had dimensions {}x{}, expected {}x{}", other.rows, other.columns,
                                 _rows, _columns);
@@ -503,7 +499,7 @@ namespace Auxil {
 
 
         Grid& operator-=(const Grid& other) {
-            if (_rows != other.rows || _columns != other.columns) {
+            if (_rows != other._rows || _columns != other._columns) {
                 throw Exception("Cannot subtract grids of different sizes.\n"
                                 "Note, right matrix had dimensions {}x{}, expected {}x{}", other.rows, other.columns,
                                 _rows, _columns);
@@ -555,7 +551,7 @@ namespace Auxil {
 
         //hadamard multiplication
         Grid multiply(const Grid& other) {
-            if (_rows != other.rows || _columns != other._columns) {
+            if (_rows != other._rows || _columns != other._columns) {
                 throw Exception("Cannot perform a hadamard operation (multiplication) on grids of different sizes.\n"
                                 "Note, right matrix had dimensions {}x{}, expected {}x{}", other._rows, other._columns,
                                 _rows, _columns);
@@ -684,7 +680,6 @@ namespace Auxil {
         }
 
         void destruct() {
-            nodes.~Array();
             length = 0;
             cur_index = npos;
         }
@@ -1195,6 +1190,53 @@ namespace Auxil {
             return res;
         }
 
+        bool try_pop_ahead(T& out) {
+            if (cur_index == npos) {
+                return false;
+            }
+            out = pop_ahead();
+            return true;
+        }
+
+        bool try_pop_behind(T& out) {
+            if (cur_index == npos) {
+                return false;
+            }
+            out = pop_behind();
+            return true;
+        }
+
+        bool try_pop_advance(T& out) {
+            if (cur_index == npos) {
+                return false;
+            }
+            out = pop_advance();
+            return true;
+        }
+
+        bool try_pop_retreat(T& out) {
+            if (cur_index == npos) {
+                return false;
+            }
+            out = pop_retreat();
+            return true;
+        }
+
+        bool try_pop_front(T& out) {
+            if (cur_index == npos) {
+                return false;
+            }
+            out = pop_front();
+            return true;
+        }
+
+        bool try_pop_back(T& out) {
+            if (cur_index == npos) {
+                return false;
+            }
+            out = pop_back();
+            return true;
+        }
 
         LinkedList& clear() {
             for (auto& node: nodes) {
