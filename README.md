@@ -26,6 +26,7 @@ Most stuff is well-tested, maybe not for every edge case, but for at least the m
 | **Print** | Uses modern formatting to add support for better printing and runtime formatting (To be deprecated when full support for std::print(ln) is available |
 | **Random** | The random class for better RNG |
 | **Threading** | Utilites for multi-threading operations |
+| **Str** | String class with more utilites and features than the std::string |
 
 
 # Containers
@@ -190,6 +191,6 @@ Most stuff is well-tested, maybe not for every edge case, but for at least the m
 `#define FORCE_INLINE __attribute__((always_inline)) inline`
 
 
-# TODO: Iterator, Math, Misc, Print, Random, Threading
+# TODO: Iterator, Math, Misc, Print, Random, Threading, Str
 **These dont have documentation because most of them are several hundered if not thousand lines of code long and im tired**
 
