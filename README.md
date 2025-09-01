@@ -9,10 +9,10 @@ Most stuff is well-tested, maybe not for every edge case, but for at least the m
 # Stats
 | Name | Value |
 | :--: | :--: |
-| Total lines | 4,308 |
-| Empty lines | 1,015 |
-| Total non-empty lines | 3,293 |
-| Total chars | 122,059 |
+| Total lines | 5,041 |
+| Empty lines | 1,192 |
+| Total non-empty lines | 3,849 |
+| Total chars | 143,375 |
 
 # Sub-libraries list
 | Name | Description |
