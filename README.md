@@ -10,10 +10,9 @@ Most stuff is well-tested, maybe not for every edge case, but for at least the m
 # Stats
 | Name | Value |
 | :--: | :--: |
-| Total lines | 5,041 |
-| Empty lines | 1,192 |
-| Total non-empty lines | 3,849 |
-| Total chars | 143,375 |
+| Total lines | 6,246 |
+| Empty lines | 1,456 |
+| Total non-empty lines | 5,940 |
 
 # Sub-libraries list
 | Name | Description |
@@ -24,6 +23,7 @@ Most stuff is well-tested, maybe not for every edge case, but for at least the m
 | **Iterator** | Utilites for iterators |
 | **Math** | Contains functions and structures for mathematical tasks |
 | **Misc** | Contains simple utilities |
+| **Networking** | simple networking library built on top of Boost::Asio |
 | **Print** | Uses modern formatting to add support for better printing and runtime formatting (To be deprecated when full support for std::print(ln) is available |
 | **Random** | The random class for better RNG |
 | **Threading** | Utilites for multi-threading operations |
@@ -188,10 +188,46 @@ Most stuff is well-tested, maybe not for every edge case, but for at least the m
 
 #  Globals
 
-*Maybe one day there will be more stuff in this section*
 `#define FORCE_INLINE __attribute__((always_inline)) inline`
+`using std::atomic_shared<T> = std::atomic<std::shared_ptr<T>>`
 
 
-# TODO: Iterator, Math, Misc, Print, Random, Threading, Str
+# Iterator
+
+
+**Concept Forward Iterator**
+ - *A concept matching a iterator that can move forwards*
+
+**Concept Bidirectional Iterator**
+ - *A concept matching a iterator that can move both directions*
+
+```
+struct iterator_from_iterable
+using iterator_from_iterable_t = typename iterator_from_iterable<T>::type
+```
+ - *returns the iterator type of a iterable container*
+
+```
+struct reverse_iterator_from_iterable
+using reverse_iterator_from_iterable_t = typename reverse_iterator_from_iterable<T>::type
+```
+ - *returns the reverse iterator type of a iterator type*
+
+
+`using iterator_value_t = typename T::value_type`
+ - *returns the iterators value*
+
+`using iterator_difference_t = typename T::difference_type`
+ - *returns the iterators difference type*
+
+
+`using iterator_reference_t = typename T::reference_type`
+ - *returns the iterators reference type*
+
+`using iterator_pointer_t = typename T::pointer_type`
+ - *returns the iterators pointer type*
+
+
+# TODO: Math, Misc, Print, Random, Threading, Str
 **These dont have documentation because most of them are several hundered if not thousand lines of code long and im tired**
 
