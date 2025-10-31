@@ -2,6 +2,7 @@
 My latest utilities library for C++, contains utilities focused around adding features C++ lacks/has bad support for and game development
 Most stuff is well-tested, maybe not for every edge case, but for at least the most common ones
 
+**THIS IS OUTDATED AND INCOMPLETE**
 # Latest Patch Notes
  - Added `BasicStr<std::integral CharT>` and its typedefs `using str = BasicStr<char>; using wstr = BasicStr<wchar_t>;`
 
