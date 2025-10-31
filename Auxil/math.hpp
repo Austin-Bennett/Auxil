@@ -12,6 +12,10 @@ namespace Auxil {
     template<typename T>
     concept Arithmetic = std::is_arithmetic_v<T>;
 
+    template<Arithmetic T>
+    T hton(T data);
+
+
     template<typename T>
     concept BasicArithmetic = requires(T a, T b)
     {
@@ -222,7 +226,8 @@ namespace Auxil {
         };
 
     template<Arithmetic T>
-    struct v2 {
+    struct
+    v2 {
 
         T x{};
         T y{};
@@ -619,7 +624,7 @@ namespace Auxil {
             { vec.z } -> std::convertible_to<A>;
         };
 
-    template<Arithmetic T>
+    template<std::floating_point T>
     struct Quaternion;
 
     template<Arithmetic T>
@@ -666,7 +671,7 @@ namespace Auxil {
 
         //rotation by euler angles, implemented after Quaternion definition
         template<std::floating_point Theta>
-        v3 rotated(const radians_t<Theta> pitch, const radians_t<Theta> yaw, const radians_t<Theta> roll) {
+        v3 rotated(const radians_t<Theta> pitch, const radians_t<Theta> yaw, const radians_t<Theta> roll) const {
             v3 res = *this;
             res.rotate(pitch, yaw, roll);
 
@@ -675,7 +680,7 @@ namespace Auxil {
 
         //rotation around a axis (should be normalized) by an angle
         template<std::floating_point Theta>
-        v3 rotated(const v3& rotation_axis, radians_t<Theta> angle) {
+        v3 rotated(const v3& rotation_axis, radians_t<Theta> angle) const {
             v3 res = *this;
             res.rotate(rotation_axis, angle);
 
@@ -683,7 +688,7 @@ namespace Auxil {
         }
 
         template<Arithmetic U>
-        v3 rotated(const Quaternion<U>& q);
+        v3 rotated(const Quaternion<U>& q) const;
 
         template<Arithmetic Length = T>
         FORCE_INLINE Length length() const {
@@ -869,12 +874,12 @@ namespace Auxil {
         }
 
         template<Arithmetic Other>
-        FORCE_INLINE v3 operator+(const v3<Other>& o) {
+        FORCE_INLINE v3 operator+(const v3<Other>& o) const {
             return add(o);
         }
 
         template<Arithmetic Other>
-        FORCE_INLINE v3 operator+(const Other o) {
+        FORCE_INLINE v3 operator+(const Other o) const {
             return add(o);
         }
 
@@ -889,12 +894,12 @@ namespace Auxil {
         }
 
         template<Arithmetic Other>
-        FORCE_INLINE v3 operator-(const v3<Other>& o) {
+        FORCE_INLINE v3 operator-(const v3<Other>& o) const {
             return sub(o);
         }
 
         template<Arithmetic Other>
-        FORCE_INLINE v3 operator-(const Other o) {
+        FORCE_INLINE v3 operator-(const Other o) const {
             return sub(o);
         }
 
@@ -909,17 +914,17 @@ namespace Auxil {
         }
 
         template<Arithmetic Other>
-        FORCE_INLINE v3 operator*(const v3<Other>& o) {
+        FORCE_INLINE v3 operator*(const v3<Other>& o) const {
             return mul(o);
         }
 
         template<Arithmetic Other>
-        FORCE_INLINE v3 operator*(const Other o) {
+        FORCE_INLINE v3 operator*(const Other o) const {
             return mul(o);
         }
 
         template<Arithmetic Other>
-        FORCE_INLINE v3 operator*(const Quaternion<Other> o) {
+        FORCE_INLINE v3 operator*(const Quaternion<Other> o) const {
             return mul(o);
         }
 
@@ -939,17 +944,17 @@ namespace Auxil {
         }
 
         template<Arithmetic Other>
-        FORCE_INLINE v3 operator/(const v3<Other>& o) {
+        FORCE_INLINE v3 operator/(const v3<Other>& o) const {
             return div(o);
         }
 
         template<Arithmetic Other>
-        FORCE_INLINE v3 operator/(const Other o) {
+        FORCE_INLINE v3 operator/(const Other o) const {
             return div(o);
         }
 
         template<Arithmetic Other>
-        FORCE_INLINE v3 operator/(const Quaternion<Other>& o) {
+        FORCE_INLINE v3 operator/(const Quaternion<Other>& o) const {
             return div(o);
         }
 
@@ -1010,7 +1015,7 @@ namespace Auxil {
     inline constexpr v3<T> ZERO = {0, 0, 0};
 
     //Quaternions are really useful for rotation in 3D
-    template<Arithmetic T>
+    template<std::floating_point T>
     struct Quaternion {
         T w, x, y, z;
 
@@ -1026,31 +1031,40 @@ namespace Auxil {
         }
 
         template<std::floating_point Theta>
+        std::pair<v3<T>, radians_t<Theta>> get_rotator() {
+            v3<T> axis;
+            radians_t<Theta> angle;
+
+            angle = 2.0f * std::acos(w);
+            T s = std::sqrt(1.0f - w * w);
+
+            if (s < epsilon<T>) {
+                axis = {1.0f, 0.0f, 0.0f};
+            } else {
+                axis = {x / s, y / s, z / s};
+            }
+
+            return {axis, angle};
+        }
+
+        template<std::floating_point Theta>
         static Quaternion make_rotator(radians_t<Theta> pitch,
                                      radians_t<Theta> yaw,
                                      radians_t<Theta> roll)
         {
-            T cy = std::cos(yaw * T(0.5));
-            T sy = std::sin(yaw * T(0.5));
-            T cp = std::cos(pitch * T(0.5));
-            T sp = std::sin(pitch * T(0.5));
-            T cr = std::cos(roll * T(0.5));
-            T sr = std::sin(roll * T(0.5));
+            Quaternion qyaw = make_rotator({0, 1, 0}, yaw);
+            Quaternion qpitch = make_rotator({1, 0, 0}, pitch);
+            Quaternion qroll = make_rotator({0, 0, 1}, roll);
 
-            return {
-                cr*cp*cy + sr*sp*sy,  // w
-                sr*cp*cy - cr*sp*sy,  // x
-                cr*sp*cy + sr*cp*sy,  // y
-                cr*cp*sy - sr*sp*cy   // z
-            };
+            return qyaw * qpitch * qroll;
         }
 
         template<std::floating_point Theta>
         static Quaternion make_rotator(const v3<T>& rotation_axis, radians_t<Theta> angle) {
 
             AngleComponents<Theta> components{};
-            components.sin = std::sin(angle);
-            components.cos = std::cos(angle);
+            components.sin = std::sin(angle * (Theta)0.5);
+            components.cos = std::cos(angle * (Theta)0.5);
             auto res = Quaternion{
                 components.cos,
                 components.sin * rotation_axis.x,
@@ -1367,6 +1381,8 @@ namespace Auxil {
 
         rotator = rotator * (*this) * rotator.conjugate();
 
+
+
         x = rotator.x;
         y = rotator.y;
         z = rotator.z;
@@ -1387,7 +1403,7 @@ namespace Auxil {
 
     template<Arithmetic T>
     template<Arithmetic U>
-    v3<T> v3<T>::rotated(const Quaternion<U> &q) {
+    v3<T> v3<T>::rotated(const Quaternion<U> &q) const {
         v3 res = *this;
         res.rotate(q);
         return res;
@@ -1481,26 +1497,19 @@ struct std::formatter<Auxil::v3<T>, char> {
     std::formatter<T, char> formatter_t;
 
     template<typename ParseContext>
-    auto parse(ParseContext& ctx) {
-        return formatter_t.parse(ctx);
-    }
+    auto parse(ParseContext& ctx) { return formatter_t.parse(ctx); }
 
     template<typename FormatContext>
     auto format(const Auxil::v3<T>& vec, FormatContext& ctx) const {
         auto out = ctx.out();
-
         out = std::format_to(out, "<");
-
-        out = formatter_t.format(vec.x,  ctx);
+        out = formatter_t.format(vec.x, ctx);
         out = std::format_to(out, ", ");
         out = formatter_t.format(vec.y, ctx);
         out = std::format_to(out, ", ");
         out = formatter_t.format(vec.z, ctx);
-
-
-
-
-        return std::format_to(out, ">");
+        out = std::format_to(out, ">");
+        return out;
     }
 };
 

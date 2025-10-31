@@ -3,6 +3,8 @@
 
 #include "globals.hpp"
 
+
+
 namespace Auxil {
     namespace Primitives {
         typedef uint8_t u8;
@@ -67,6 +69,12 @@ namespace Auxil {
     concept Functor = requires(F f, Args... args)
     {
         { std::invoke(f, args...) } -> std::same_as<Ret>;
+    };
+
+    template<typename F, typename... Args>
+    concept Invocable = requires(F&& func, Args&&... args)
+    {
+        std::invoke(std::forward<F>(func), std::forward<Args>(args)...);
     };
 }
 

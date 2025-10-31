@@ -5,6 +5,7 @@
 #include "iterator.hpp"
 #include "exception.hpp"
 #include "math.hpp"
+#include "globals.hpp"
 
 namespace Auxil {
     //A fixed-size array, but can be allocated at runtime
@@ -155,7 +156,7 @@ namespace Auxil {
             return _size == 0;
         }
 
-        [[nodiscard]] usize size() const {
+        [[nodiscard]] usize size() const noexcept {
             return _size;
         }
 
@@ -194,18 +195,20 @@ namespace Auxil {
             return _arr[ind];
         }
 
-        template<typename... Args>
+        template<typename... Args, typename = std::enable_if_t<std::is_constructible_v<T, Args...>>>
         FORCE_INLINE T& emplace_at(usize ind, Args&&... constructor) const {
             std::destroy_at(_arr + ind);
             T& res = *(new (_arr + ind) T(std::forward<Args>(constructor)...));
             return res;
         }
 
-        FORCE_INLINE T* data() const {
+        FORCE_INLINE const T* data() const noexcept {
             return _arr;
         }
 
-
+        FORCE_INLINE T* data() noexcept {
+            return _arr;
+        }
     };
 
     template<typename U, typename = std::enable_if_t<OstreamFormattable<U>>>
@@ -610,22 +613,18 @@ namespace Auxil {
      * while also having the insertion, and removal speed of a linked list, random element access is still slower than
      * a vector, but accessing the front and back elements is O(1) still with some simple data management
      *
-     * CONSIDER: sort elements in the internal array by their relative position
      */
     template<typename T, typename = std::enable_if_t<std::semiregular<T>>>
     class LinkedList {
     public:
         static constexpr usize npos = std::numeric_limits<usize>::max();
         struct Node {
-            //if this node is valid
-            bool valid{false};
             T value{};
             //indices into whatever is next or previous
             usize prev{npos};
             usize next{npos};
 
             void reset() {
-                valid = false;
                 value = T();
                 prev = npos;
                 next = npos;
@@ -696,6 +695,14 @@ namespace Auxil {
             reserve(elements.size());
             for (auto& element: elements) {
                 push_back(element);
+            }
+        }
+
+        template<typename It>
+        LinkedList(It start, It finish) {
+            while (start != finish) {
+                push_back(*start);
+                ++start;
             }
         }
 
@@ -786,7 +793,7 @@ namespace Auxil {
             //if the array has 2 or more elements, then the back should be the first element so long as
             //nothing has gone wrong
             usize back_ind = length > 0 /*If empty*/ ? (length >= 2 /*If it has 2 or more elements*/ ? 1:0) : npos;
-            Node& n = nodes.emplace_at(length++, true, value, back_ind, npos);
+            Node& n = nodes.emplace_at(length++, value, back_ind, npos);
 
             //set it to 1 because we swap its current position with 1 later, if this is the only element currently added
             //then the npos check will stop anything from happening,
@@ -813,7 +820,7 @@ namespace Auxil {
             //if the array has 1 or more elements, then the front is index 0
             //nothing has gone wrong
             usize start_ind = length > 0 /*If not empty*/ ? 0 : npos;
-            Node& n = nodes.emplace_at(length++, true, value, npos, start_ind);
+            Node& n = nodes.emplace_at(length++, value, npos, start_ind);
 
             //set it to 1 because we swap its current position with 1 later, if this is the only element currently added
             //then the npos check will stop anything from happening,
@@ -841,7 +848,7 @@ namespace Auxil {
             //if the array has 2 or more elements, then the back should be the first element so long as
             //nothing has gone wrong
             usize back_ind = length > 0 /*If empty*/ ? (length >= 2 /*If it has 2 or more elements*/ ? 1:0) : npos;
-            Node& n = nodes.emplace_at(length++, true, value, back_ind, npos);
+            Node& n = nodes.emplace_at(length++, value, back_ind, npos);
 
             //set it to length-1 because we swap its current position with 1 later, if this is the only element currently added
             //then the npos check will stop anything from happening,
@@ -869,7 +876,7 @@ namespace Auxil {
             //if the array has 1 or more elements, then the front is index 0
             //nothing has gone wrong
             usize start_ind = length > 0 /*If not empty*/ ? 0 : npos;
-            Node& n = nodes.emplace_at(length++, true, value, npos, start_ind);
+            Node& n = nodes.emplace_at(length++, value, npos, start_ind);
 
             //if this is the only element currently added then the npos check will stop anything from happening
             if (start_ind != npos) nodes[start_ind].prev = length-1;
@@ -892,7 +899,7 @@ namespace Auxil {
             }
             Node* cur = nullptr;
             if (cur_index != npos) cur = &nodes[cur_index];
-            Node& n = nodes.emplace_at(length++, true, value, cur_index, cur ? cur->next:npos);
+            Node& n = nodes.emplace_at(length++, value, cur_index, cur ? cur->next:npos);
             if (cur) {
                 if (cur->next != npos) nodes[cur->next].prev = length-1;
                 cur->next = length-1;
@@ -914,7 +921,7 @@ namespace Auxil {
             }
             Node* cur = nullptr;
             if (cur_index != npos) cur = &nodes[cur_index];
-            Node& n = nodes.emplace_at(length++, true, value, cur ? cur->prev:npos, cur_index);
+            Node& n = nodes.emplace_at(length++, value, cur ? cur->prev:npos, cur_index);
             if (cur) {
                 if (cur->prev != npos) nodes[cur->prev].next = length-1;
                 cur->prev = length-1;
@@ -936,7 +943,7 @@ namespace Auxil {
             }
             Node* cur = nullptr;
             if (cur_index != npos) cur = &nodes[cur_index];
-            Node& n = nodes.emplace_at(length++, true, value, cur_index, cur ? cur->next:npos);
+            Node& n = nodes.emplace_at(length++, value, cur_index, cur ? cur->next:npos);
             if (cur) {
                 if (cur->next != npos) nodes[cur->next].prev = length-1;
                 cur->next = length-1;
@@ -958,7 +965,7 @@ namespace Auxil {
             }
             Node* cur = nullptr;
             if (cur_index != npos) cur = &nodes[cur_index];
-            Node& n = nodes.emplace_at(length++, true, value, cur ? cur->prev:npos, cur_index);
+            Node& n = nodes.emplace_at(length++, value, cur ? cur->prev:npos, cur_index);
             if (cur) {
                 if (cur->prev != npos) nodes[cur->prev].next = length-1;
                 cur->prev = length-1;
@@ -974,6 +981,161 @@ namespace Auxil {
         }
 
         //--------- Removing Items -----------
+
+        void remove_ahead() {
+            if (cur_index == npos) return;
+            Node* cur = &nodes[cur_index];
+
+            Node* next = nullptr;
+            if (cur->next != npos) next = &nodes[cur->next];
+
+            if (next) {
+                //swap references
+                usize nex_id = cur->next;
+                cur->next = next->next;
+                if (cur->next != npos) nodes[cur->next].prev = cur_index;
+
+                //check if next was the previous back, and if so, make the cur index the back
+                if (next->next == npos) {
+                    usize back_ind = length > 1 ? 1 : 0;
+                    swap(cur_index, back_ind);
+                }
+
+                //makes sure we don't accidentally use this node
+                next->reset();
+                //swap with the last element
+                swap(nex_id, length-1);
+
+                length--;
+            }
+        }
+
+        void remove_behind() {
+            if (cur_index == npos) return;
+
+            Node* cur = &nodes[cur_index];
+
+            Node* prev = nullptr;
+            if (cur->prev != npos) prev = &nodes[cur->prev];
+
+            if (prev) {
+                //swap references
+                usize prev_id = cur->prev;
+                cur->prev = prev->prev;
+                if (cur->prev != npos) nodes[cur->prev].next = cur_index;
+
+                //check if next was the previous start, and if so, make the cur index the back
+                if (prev->prev == npos) {
+                    swap(cur_index, 0);
+                }
+
+                //makes sure we don't accidentally use this node
+                prev->reset();
+                //swap with the last element
+                swap(prev_id, length-1);
+
+                length--;
+            }
+        }
+
+        void remove_advance() {
+            if (cur_index == npos) return;
+            Node* cur = &nodes[cur_index];
+            Node* next = nullptr;
+            Node* prev = nullptr;
+            if (cur->next != npos) next = &nodes[cur->next];
+            if (cur->prev != npos) prev = &nodes[cur->prev];
+
+            if (next) {
+                //first check if its the front
+                if (cur->prev == npos) {
+                    swap(cur->next, 0);
+                }
+
+                //replace references
+                next->prev = cur->prev;
+                if (prev) prev->next = cur->next;
+
+                usize cind = cur_index;
+                cur_index = cur->next;
+
+                cur->reset();
+
+                //move to the back
+                swap(cind, length-1);
+            } else if (prev) {
+                //cur must be the last node
+                swap(cur->prev, length > 1 ? 1 : 0);
+
+
+                //we dont have to update next because its null
+                prev->next = npos;
+
+                usize cind = cur_index;
+                //advance to the __void__
+                cur_index = npos;
+
+                cur->reset();
+
+                //move to the back
+                swap(cind, length-1);
+            } else {
+                cur->reset();
+                cur_index = npos;
+            }
+            length--;
+        }
+
+        void remove_retreat() {
+            if (cur_index == npos) return;
+
+            Node* cur = &nodes[cur_index];
+
+            Node* next = nullptr;
+            Node* prev = nullptr;
+            if (cur->next != npos) next = &nodes[cur->next];
+            if (cur->prev != npos) prev = &nodes[cur->prev];
+
+            if (prev) {
+                //first check if it's the back
+                if (cur->next == npos) {
+                    swap(cur->next, length > 1 ? 1 : 0);
+                }
+
+                //replace references
+                prev->next = cur->next;
+                if (next) next->prev = cur->prev;
+
+                usize cind = cur_index;
+                cur_index = cur->prev;
+
+                cur->reset();
+
+                //move to the back
+                swap(cind, length-1);
+            } else if (next) {
+                //cur must be the first node
+                swap(cur->next, 0);
+
+
+                //we don't have to update prev because its null
+                next->prev = npos;
+
+                usize cind = cur_index;
+
+                //advance to the __void__
+                cur_index = npos;
+
+                cur->reset();
+
+                //move to the back
+                swap(cind, length-1);
+            } else {
+                cur->reset();
+                cur_index = npos;
+            }
+            length--;
+        }
 
         T pop_ahead() {
             if (cur_index == npos) throw Exception("Cannot pop element of empty linked list!");
@@ -1070,8 +1232,8 @@ namespace Auxil {
                 prev->next = npos;
 
                 usize cind = cur_index;
-                //only difference if we have to move back
-                cur_index = cur->prev;
+                //advance to the __void__
+                cur_index = npos;
 
                 cur->reset();
 
@@ -1121,8 +1283,9 @@ namespace Auxil {
                 next->prev = npos;
 
                 usize cind = cur_index;
-                //only difference if we have to move forward
-                cur_index = cur->next;
+
+                //advance to the __void__
+                cur_index = npos;
 
                 cur->reset();
 
@@ -1137,7 +1300,7 @@ namespace Auxil {
         }
 
 
-        //pops the back of the list, if the current node is the back, it retreats
+        //pops the back of the list, if the current node is the back, it goes to npos
         T pop_back() {
             if (cur_index == npos) throw Exception("Cannot pop back of empty linked list!");
 
@@ -1150,7 +1313,7 @@ namespace Auxil {
             else return *this;
             T res = std::move(back->value);
 
-            if (back_ind == cur_index) cur_index = back->prev;
+            if (back_ind == cur_index) cur_index = npos;
 
             //move this back to the end
             swap(back_ind, length-1);
@@ -1166,7 +1329,7 @@ namespace Auxil {
             return res;
         }
 
-        //pops the front of the list, if the current node is the front, it advances
+        //pops the front of the list, if the current node is the front, it goes to npos
         T pop_front() {
             if (cur_index == npos) throw Exception("Cannot pop front of empty linked list!");
 
@@ -1174,7 +1337,7 @@ namespace Auxil {
             front = &nodes[0];
             T res = std::move(front->value);
 
-            if (cur_index == 0) cur_index = front->next;
+            if (cur_index == 0) cur_index = npos;
 
             //move this front to the end
             swap(0, length-1);
@@ -1254,21 +1417,19 @@ namespace Auxil {
         void advance() const {
             if (cur_index == npos) return;
 
-            if (nodes[cur_index].next != npos) cur_index = nodes[cur_index].next;
+            cur_index = nodes[cur_index].next;
             return;
         }
 
         void retreat() const {
             if (cur_index == npos) return;
 
-            if (nodes[cur_index].prev != npos) cur_index = nodes[cur_index].prev;
+            cur_index = nodes[cur_index].prev;
             return;
         }
 
         void advance(usize amt) const {
-            if (cur_index == npos) return;
-
-            while (nodes[cur_index].next != npos && amt-- > 0) {
+            while (cur_index != npos && amt-- > 0) {
                 cur_index = nodes[cur_index].next;
             }
 
@@ -1276,9 +1437,7 @@ namespace Auxil {
         }
 
         void retreat(usize amt) const {
-            if (cur_index == npos) return;
-
-            while (nodes[cur_index].prev != npos && amt-- > 0) {
+            while (cur_index != npos && amt-- > 0) {
                 cur_index = nodes[cur_index].prev;
             }
 
@@ -1288,21 +1447,20 @@ namespace Auxil {
         LinkedList& advance() {
             if (cur_index == npos) return  *this;
 
-            if (nodes[cur_index].next != npos) cur_index = nodes[cur_index].next;
+            cur_index = nodes[cur_index].next;
             return *this;
         }
 
         LinkedList& retreat() {
             if (cur_index == npos) return  *this;
 
-            if (nodes[cur_index].prev != npos) cur_index = nodes[cur_index].prev;
+            cur_index = nodes[cur_index].prev;
             return  *this;
         }
 
         LinkedList& advance(usize amt) {
-            if (cur_index == npos) return  *this;
 
-            while (nodes[cur_index].next != npos && amt-- > 0) {
+            while (cur_index != npos && amt-- > 0) {
                 cur_index = nodes[cur_index].next;
             }
 
@@ -1310,13 +1468,16 @@ namespace Auxil {
         }
 
         LinkedList& retreat(usize amt) {
-            if (cur_index == npos) return *this;
 
-            while (nodes[cur_index].prev != npos && amt-- > 0) {
+            while (cur_index != npos && amt-- > 0) {
                 cur_index = nodes[cur_index].prev;
             }
 
             return *this;
+        }
+
+        bool valid() {
+            return cur_index != npos;
         }
 
         void to_front() const {
@@ -1482,6 +1643,11 @@ namespace Auxil {
             bool operator>=(const Iterator&) const = default;
             bool operator<=(const Iterator&) const = default;
         };
+
+        //returns a forward iterator starting here
+        Iterator current() {
+            return Iterator(*this, cur_index);
+        }
 
         Iterator begin() {
             return Iterator(*this);

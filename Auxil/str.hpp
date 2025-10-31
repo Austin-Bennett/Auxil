@@ -16,8 +16,11 @@ namespace Auxil {
     template<typename T, std::integral CharT>
     constexpr BasicStr<CharT> get_typename();
 
-    template< std::integral CharT, typename T>
+    template<std::integral CharT, typename T, typename>
     constexpr BasicStr<CharT> get_typename(const T& obj);
+
+    template<std::integral CharT>
+    constexpr BasicStr<CharT> get_typename(const std::type_index& obj);
 
 
     //forward declare these so the compiler knows they exist before checking the concepts out
@@ -88,9 +91,12 @@ namespace Auxil {
 
     template<std::integral CharT>
     class BasicStr {
+    public:
+        constexpr static usize npos = std::numeric_limits<usize>::max();
+    private:
         Array<CharT> _cstr{};
         usize _length{0};
-        constexpr static usize npos = std::numeric_limits<usize>::max();
+
 
 
         void _reserve(usize size) {
@@ -101,6 +107,21 @@ namespace Auxil {
             std::ranges::move(rng, alloc.begin());
             alloc[_length] = CharT{};
             _cstr = std::move(alloc);
+        }
+
+        std::strong_ordering _compare(const CharT* other, usize len, usize pos = 0, usize n = npos) const {
+
+            if (pos > len) return std::strong_ordering::less;
+            n = std::min(n, len-pos);
+
+            for (usize i = 0; i < n && i < _length; i++) {
+                if (other[i+pos] != _cstr[i])
+                    return other[i+pos] <=> _cstr[i];
+            }
+
+            if (n > _length) return std::strong_ordering::greater;
+            if (n < _length) return std::strong_ordering::less;
+            return std::strong_ordering::equal;
         }
 
     public:
@@ -118,7 +139,12 @@ namespace Auxil {
 
         BasicStr() = default;
         BasicStr(const BasicStr&) noexcept = default;
-        BasicStr(BasicStr&&) noexcept = default;
+        BasicStr(BasicStr&& s) noexcept {
+            _cstr = std::move(s._cstr);
+            _length = s._length;
+            s._length = 0;
+
+        }
 
 
         template<typename T, typename = std::enable_if_t<!std::is_same_v<std::initializer_list<CharT>, T> && ! std::is_same_v<T, CharT*>>>
@@ -158,8 +184,9 @@ namespace Auxil {
             _cstr.back() = CharT{};
         }
 
-        template<std::forward_iterator InputIterator>
-        BasicStr(InputIterator first, InputIterator last) : _cstr(std::distance(first, last)+1), _length(_cstr.size()-1) {
+        template<typename InputIterator>
+        BasicStr(InputIterator first, InputIterator last) : _cstr(std::distance(first, last)+1),
+                                                            _length(_cstr.size()-1) {
             std::ranges::copy(first, last, _cstr.begin());
             _cstr.back() = CharT{};
         }
@@ -172,7 +199,15 @@ namespace Auxil {
         }
 
         BasicStr& operator=(const BasicStr&) noexcept = default;
-        BasicStr& operator=(BasicStr&&) noexcept = default;
+        BasicStr& operator=(BasicStr&& s) noexcept {
+            if (&s == this) return *this;
+
+            _cstr = std::move(s._cstr);
+            _length = s._length;
+            s._length = 0;
+
+            return *this;
+        }
         BasicStr& operator=(const char* s) {
             if (!s) {
                 _cstr = Array<CharT>(1);
@@ -236,7 +271,7 @@ namespace Auxil {
         }
 
         BasicStr& clear() {
-            if (_length == 0) return *this;
+            if (_length == 0 || _cstr.empty()) return *this;
             _cstr[0] = CharT{};
             _length = 0;
 
@@ -363,7 +398,7 @@ namespace Auxil {
                 //we do a exponential reserve to make frequent allocation faster,
                 //and then tac on the len to make sure we have enough for the string we're about to append
                 //reserve auto-handles reserving the null char
-                reserve(_cstr.size()*2 + 1);
+                _reserve(_cstr.size()*2 + 1);
             }
 
             _cstr[_length++] = static_cast<CharT>(c);
@@ -442,7 +477,7 @@ namespace Auxil {
 
             if (pos + n >= _length) {
                 //we just chop off the string
-                _length = pos+1;
+                _length = pos;
                 _cstr[_length] = CharT{};
                 return *this;
             }
@@ -682,13 +717,17 @@ namespace Auxil {
             return split(del, start, end);
         }
 
-        template<Functor<usize, const BasicStr&, usize> T>
+
+
+        template<Functor<usize, const BasicStr&, usize, bool> T>
         [[nodiscard]] std::vector<BasicStr> split_if(T&& pred, bool keep_skipped = false) const {
             std::vector<BasicStr> result;
             usize start = 0;
+            bool just_split = false;
 
             for (usize i = 0; i < _length; i++) {
-                if (usize skip = pred(*this, i)) {
+                if (usize skip = pred(*this, i, just_split)) {
+                    just_split = true;
                     skip = std::min(skip, _length-i);
                     if (i != start) {
                         result.push_back(substr(start, i-start));
@@ -698,7 +737,7 @@ namespace Auxil {
                     }
                     start = i + skip;
                     i = start-1;
-                }
+                } else just_split = false;
             }
 
             if (start < _length) {
@@ -739,11 +778,11 @@ namespace Auxil {
 
         BasicStr& trim() {
             usize n = 0;
-            while (n < _length && std::isspace(static_cast<unsigned char>(_cstr[n]))) ++n;
+            while (n < _length && std::iswspace(static_cast<unsigned char>(_cstr[n]))) ++n;
             if (n != 0) erase(0, n);
 
             usize back = _length;
-            while (back > 0 && std::isspace(static_cast<unsigned char>(_cstr[back-1]))) --back;
+            while (back > 0 && std::iswspace(static_cast<unsigned char>(_cstr[back-1]))) --back;
             if (back != _length) {
                 erase(back - (back != 0));
             }
@@ -821,6 +860,32 @@ namespace Auxil {
             return end();
         }
 
+        [[nodiscard]] usize index(const BasicStr& s, usize pos = 0, usize n = npos) const {
+            if (s.size() > _length) return npos;
+            if (pos >= _length) return npos;
+            n = std::min(n, _length-pos);
+
+            for (usize i = 0; i <= n-s.size(); i++) {
+                if (s.compare(*this, i+pos, s.size()) == std::strong_ordering::equal) {
+                    return pos+i;
+                }
+            }
+            return npos;
+        }
+
+        [[nodiscard]] usize rindex(const BasicStr& s, usize pos = 0, usize n = npos) const {
+            if (s.size() > _length) return npos;
+            if (pos >= _length) return npos;
+            n = std::min(n, _length-pos);
+            //only difference is we check in reverse, and use i-1 to guard against underflow
+            for (usize i = n-s.size()+1; i > 0 ; --i) {
+                if (s.compare(*this, i+pos-1, s.size()) == std::strong_ordering::equal) {
+                    return pos+i-1;
+                }
+            }
+            return npos;
+        }
+
         template<typename T, std::enable_if_t<!std::same_as<BasicStr, T>>>
         iterator find(const T& x, usize pos = 0, usize n = npos) const {
             return find(BasicStr(x), pos, n);
@@ -835,6 +900,23 @@ namespace Auxil {
         [[nodiscard]] bool starts_with(const BasicStr& s) const {
             if (s.size() > _length) return false;
             return s.compare(*this, 0, s.size()) == std::strong_ordering::equal;
+        }
+
+        [[nodiscard]] bool starts_with(const CharT* s) const {
+            auto len = traits_type::length(s);
+            if (len > _length) return false;
+            for (usize i = 0; i < _length && i < len; i++) {
+                if (s[i] != _cstr[i]) return false;
+            }
+            return true;
+        }
+
+        [[nodiscard]] bool starts_with(const CharT* s, const usize len) const {
+            if (len > _length) return false;
+            for (usize i = 0; i < _length && i < len; i++) {
+                if (s[i] != _cstr[i]) return false;
+            }
+            return true;
         }
 
         [[nodiscard]] bool ends_with(const BasicStr& s) const {
@@ -874,11 +956,13 @@ namespace Auxil {
             if (empty()) return false;
             auto loc = std::locale();
             usize i = 0;
+            u32 num_periods = 0;
             if (_cstr[i] == CharT{'-'}) i++;
             for (;i < _length; i++) {
-                if (!std::isdigit(_cstr[i], loc)) return false;
+                if (!std::isdigit(_cstr[i], loc) && _cstr[i] != CharT{'.'}) return false;
+                if (_cstr[i] == CharT{'.'}) num_periods++;
             }
-            return true;
+            return num_periods <= 1;
         }
 
 
@@ -886,7 +970,7 @@ namespace Auxil {
             return _cstr.data();
         }
 
-        CharT* data() const {
+        CharT* data() {
             return _cstr.data();
         }
 
@@ -907,6 +991,20 @@ namespace Auxil {
             return std::strong_ordering::equal;
         }
 
+        std::strong_ordering compare_ignore_case(const BasicStr& other, usize pos = 0, usize n = npos) const {
+            if (pos > other.length()) return std::strong_ordering::less;
+            n = std::min(n, other.length()-pos);
+
+            for (usize i = 0; i < n && i < _length; i++) {
+                if (std::tolower((int)other[i+pos]) != std::tolower((int)_cstr[i]))
+                    return std::tolower(_cstr[i]) <=> std::tolower(other[i+pos]);
+            }
+
+            if (n > _length) return std::strong_ordering::greater;
+            if (n < _length) return std::strong_ordering::less;
+            return std::strong_ordering::equal;
+        }
+
 
         std::strong_ordering compare(const CharT* other, usize pos = 0, usize n = npos) const {
             auto olength = traits_type::length(other);
@@ -916,6 +1014,21 @@ namespace Auxil {
             for (usize i = 0; i < n && i < _length; i++) {
                 if (other[i+pos] != _cstr[i])
                     return other[i+pos] <=> _cstr[i];
+            }
+
+            if (n > _length) return std::strong_ordering::greater;
+            if (n < _length) return std::strong_ordering::less;
+            return std::strong_ordering::equal;
+        }
+
+        std::strong_ordering compare_ignore_case(const CharT* other, usize pos = 0, usize n = npos) const {
+            auto olength = traits_type::length(other);
+            if (pos > olength) return std::strong_ordering::less;
+            n = std::min(n, olength-pos);
+
+            for (usize i = 0; i < n && i < _length; i++) {
+                if (std::tolower((int)other[i+pos]) != std::tolower((int)_cstr[i]))
+                    return std::tolower(_cstr[i]) <=> std::tolower(other[i+pos]);
             }
 
             if (n > _length) return std::strong_ordering::greater;
@@ -992,6 +1105,83 @@ namespace Auxil {
 
     };
 
+    //integers
+    template<std::integral T, typename = std::enable_if_t<!std::is_same_v<bool, T>>>
+    T ston(const BasicStr<char>& str, int base) {
+        T result{};
+        auto [ptr, ec] = std::from_chars(str.c_str(), str.c_str() + str.size(), result, base);
+        if (ec != std::errc{}) {
+            throw Exception("Invalid numeric string: {}\n"
+                            "Note: with base = {}",str, base);
+        }
+        return result;
+    }
+
+    template<std::integral T, typename = std::enable_if_t<!std::is_same_v<bool, T>>>
+    T ston(const BasicStr<char>& str) {
+        return ston<T>(str, 10);
+    }
+
+    //floats
+    template<std::floating_point T, typename = std::enable_if_t<!std::is_same_v<bool, T>>>
+    T ston(const BasicStr<char>& str, std::chars_format fmt) {
+        T result{};
+        auto [ptr, ec] = std::from_chars(str.c_str(), str.c_str() + str.size(), result, fmt);
+        if (ec != std::errc{}) {
+            throw Exception("Invalid numeric string: {}", str);
+        }
+        return result;
+    }
+
+    template<std::floating_point T, typename = std::enable_if_t<!std::is_same_v<bool, T>>>
+    T ston(const BasicStr<char>& str) {
+        return ston<T>(str, std::chars_format::general);
+    }
+
+    //bool
+    inline bool stob(const BasicStr<char>& str) {
+        if (str.compare_ignore_case("true") == std::strong_ordering::equal) return true;
+        if (str.is_numeric() && ston<f64>(str) != 0) return true;
+        return false;
+    }
+
+    //wide integers
+    template<std::integral T, typename = std::enable_if_t<!std::is_same_v<bool, T>>>
+    T ston(const BasicStr<wchar_t>& str, int base) {
+        return ston<T>(BasicStr<char>(str), base);
+    }
+
+    template<std::integral T, typename = std::enable_if_t<!std::is_same_v<bool, T>>>
+    T ston(const BasicStr<wchar_t>& str) {
+        return ston<T>(BasicStr<char>(str));
+    }
+
+    //wide floats
+    template<std::floating_point T, typename = std::enable_if_t<!std::is_same_v<bool, T>>>
+    T ston(const BasicStr<wchar_t>& str, std::chars_format fmt) {
+        return ston<T>(BasicStr<char>(str), fmt);
+    }
+
+    template<std::floating_point T, typename = std::enable_if_t<!std::is_same_v<bool, T>>>
+    T ston(const BasicStr<wchar_t>& str) {
+        return ston<T>(BasicStr<char>(str), std::chars_format::general);
+    }
+
+    //wide bool
+    inline bool stob(const BasicStr<wchar_t>& str) {
+        if (str.compare_ignore_case(L"true") == std::strong_ordering::equal) return true;
+        if (str.is_numeric() && ston<f64>(str) != 0) return true;
+        return str.length() > 0;
+    }
+
+
+    //
+    // template<std::integral CharT, std::floating_point T>
+    // T ston(const BasicStr<CharT>& str, int base = 10) {
+    //     long double result = std::wcstold(str.data(), nullptr);
+    //
+    //     return static_cast<T>(result);
+    // }
 
 
     //char stuff
@@ -1089,7 +1279,7 @@ namespace Auxil {
         return result;
     }
 
-    template<std::integral CharT, typename T>
+    template<std::integral CharT, typename T, typename = std::enable_if_t<!std::is_same_v<T, std::type_index>>>
     constexpr BasicStr<CharT> get_typename([[maybe_unused]] const T& obj) {
         int status;
         char* demangle = abi::__cxa_demangle(typeid(obj).name(), nullptr, nullptr, &status);
@@ -1103,6 +1293,19 @@ namespace Auxil {
         return result;
     }
 
+    template<std::integral CharT>
+    constexpr BasicStr<CharT> get_typename(const std::type_index& ti) {
+        int status;
+        char* demangle = abi::__cxa_demangle(ti.name(), nullptr, nullptr, &status);
+
+        const char* s = (status == 0 ? demangle : ti.name());
+        BasicStr<CharT> result(s, s+std::char_traits<char>::length(s));
+
+        // Free the demangled string if it's not null
+        if (demangle) std::free(demangle);
+
+        return result;
+    }
 
     template<std::integral CharT>
     template<typename T>
@@ -1134,6 +1337,8 @@ namespace Auxil {
 
     using str = BasicStr<char>;
     using wstr = BasicStr<wchar_t>;
+    using strmatch = std::match_results<str::iterator>;
+    using wstrmatch = std::match_results<wstr::iterator>;
 }
 
 
@@ -1186,6 +1391,18 @@ namespace std {
         template<typename FormatContext>
         auto format(const Auxil::BasicStr<CharT>& s, FormatContext& ctx) const {
             return formatter<const CharT*, CharT>::format(s.c_str(), ctx);
+        }
+    };
+
+
+    template<std::integral CharT>
+    struct hash<Auxil::BasicStr<CharT>> {
+        Auxil::usize operator()(const Auxil::BasicStr<CharT>& s) const noexcept {
+            Auxil::usize h = 0;
+            for (size_t i = 0; i < s.length(); ++i) {
+                h = h * 31 + static_cast<Auxil::usize>(s[i]);
+            }
+            return h;
         }
     };
 }

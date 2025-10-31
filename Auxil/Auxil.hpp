@@ -9,5 +9,8 @@
 #include "misc.hpp"
 #include "print.hpp"
 #include "random.hpp"
+#include "str.hpp"
+#include "threading.hpp"
+//#include "networking.hpp"
 
 #endif
